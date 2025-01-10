@@ -2,52 +2,129 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
+use App\Models\User;
+use App\Models\Car;
+use App\Models\Brand;
+use App\Models\City;
+use App\Models\Country;
+use App\Models\Travel;
 
 // Get all users
 Route::get('/users', function () {
-    $users = DB::select('SELECT * FROM users');
-    return response()->json($users);
+    $users = User::with(['car.brand', 'city.country'])->get();
+    return response()->json([
+        'users' => $users
+    ]);
 });
+
 
 // Get a specific user by ID
 Route::get('/users/{id}', function ($id) {
-    $user = DB::select('SELECT * FROM users WHERE id = ?', [$id]);
-    if (empty($user)) {
-        return response()->json(['message' => 'User not found'], 404);
-    }
-    return response()->json($user[0]);
+    $user = User::with(['car.brand', 'city.country'])->findOrFail($id);
+    return response()->json([
+        'user' => $user
+    ]);
 });
 
 // Create a new user
-Route::post('/users', function (\Illuminate\Http\Request $request) {
-    $name = $request->input('name');
-    $email = $request->input('email');
-    $password = $request->input('password');
+Route::post('/users', function (Request $request) {
+    $validated = $request->validate([
+        'firstname' => 'required|string',
+        'lastname' => 'required|string',
+        'email' => 'required|email|unique:users',
+        'password' => 'required',
+        'phone' => 'required',
+        'streetnum' => 'required',
+        'city_id' => 'required|exists:cities,id',
+        'car_id' => 'required|exists:cars,id'
+    ]);
 
-    DB::insert('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', [$name, $email, $password]);
+    $validated['password'] = Hash::make($validated['password']);
+    
+    $user = User::create($validated);
 
-    return response()->json(['message' => 'User created successfully'], 201);
+    return response()->json([
+        'message' => 'User created successfully',
+        'user' => $user->load(['car.brand', 'city.country'])
+    ], 201);
 });
 
-// Update a user by ID
-Route::put('/users/{id}', function (\Illuminate\Http\Request $request, $id) {
-    $name = $request->input('name');
-    $email = $request->input('email');
-    $password = $request->input('password');
-
-    $affected = DB::update('UPDATE users SET name = ?, email = ?, password = ? WHERE id = ?', [$name, $email, $password, $id]);
-
-    if ($affected === 0) {
-        return response()->json(['message' => 'User not found or no changes made'], 404);
+// Update user by id
+Route::patch('/users/{id}', function (Request $request, $id) {
+    $user = User::findOrFail($id);
+    
+    // Validation rules
+    $rules = [
+        'firstname' => 'sometimes|string',
+        'lastname' => 'sometimes|string',
+        'email' => [
+            'sometimes',
+            'email',
+            Rule::unique('users')->ignore($user->id),
+        ],
+        'password' => 'sometimes|string',
+        'phone' => 'sometimes|string',
+        'streetnum' => 'sometimes|string',
+        'city_id' => 'sometimes|exists:cities,id',
+        'car_id' => 'sometimes|exists:cars,id'
+    ];
+    
+    $validated = $request->validate($rules);
+    
+    // Hash password if it's being updated
+    if (isset($validated['password'])) {
+        $validated['password'] = Hash::make($validated['password']);
     }
-    return response()->json(['message' => 'User updated successfully']);
+    
+    $user->update($validated);
+    
+    return response()->json([
+        'message' => 'User updated successfully',
+        'user' => $user->load(['car.brand', 'city.country'])
+    ]);
 });
 
-// Delete a user by ID
-Route::delete('/users/{id}', function ($id) {
-    $deleted = DB::delete('DELETE FROM users WHERE id = ?', [$id]);
-    if ($deleted === 0) {
-        return response()->json(['message' => 'User not found'], 404);
-    }
-    return response()->json(['message' => 'User deleted successfully']);
+// Get all countries
+Route::get('/countries', function () {
+    $countries = Country::get();
+    return response()->json([
+        'countries' => $countries
+    ]);
+});
+
+// create a new country
+Route::post('/countries', function (Request $request) {
+    $validated = $request->validate([
+        'name' => 'required|string|unique:countries,name',
+    ]);
+    
+    $country = Country::create($validated);
+    return response()->json([
+        'message' => 'country created successfully',
+        'country' => $country
+    ], 201);
+});
+
+// Get all cities
+Route::get('/cities', function () {
+    $cities = City::with('country')->get();
+    return response()->json([
+        'cities' => $cities
+    ]);
+});
+
+// create a new city
+Route::post('/cities', function (Request $request) {
+    $validated = $request->validate([
+        'name' => 'required|string|unique:cities,name',
+        'country_id' => 'required|exists:countries,id'
+    ]);
+    
+    $city = City::create($validated);
+    return response()->json([
+        'message' => 'city created successfully',
+        'city' => $city->load(['country'])
+    ], 201);
 });
