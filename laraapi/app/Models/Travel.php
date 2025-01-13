@@ -13,7 +13,8 @@ class Travel extends Model
         'date',
         'user_id',
         'fee',
-        'km'
+        'km',
+        'car_id'
     ];
 
     public function users()
@@ -24,5 +25,10 @@ class Travel extends Model
     public function driver()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function car()
+    {
+        return $this->belongsTo(Car::class, 'car_id');
     }
 }

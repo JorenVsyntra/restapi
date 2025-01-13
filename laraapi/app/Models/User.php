@@ -17,9 +17,8 @@ class User extends Authenticatable
         'email',
         'password',
         'phone',
-        'address',
+        'location_id',
         'bio',
-        'city_id',
         'car_id'
     ];
 
@@ -27,19 +26,20 @@ class User extends Authenticatable
         'password'
     ];
 
-    public function city()
-    {
-        return $this->belongsTo(City::class);
-    }
-
     public function car()
     {
         return $this->belongsTo(Car::class);
+    }
+
+    public function location()
+    {
+        return $this->belongsTo(Location::class);
     }
 
     public function travels()
     {
         return $this->belongsToMany(Travel::class, 'user_travel');
     }
+
 }
 

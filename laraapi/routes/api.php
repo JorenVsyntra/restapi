@@ -9,11 +9,12 @@ use App\Models\Car;
 use App\Models\Brand;
 use App\Models\City;
 use App\Models\Country;
+use App\Models\Location;
 use App\Models\Travel;
 
 // Get all users
 Route::get('/users', function () {
-    $users = User::with(['car.brand', 'city.country'])->get();
+    $users = User::with(['car.brand', 'location.city.country'])->get();
     return response()->json([
         'users' => $users
     ]);
@@ -22,7 +23,7 @@ Route::get('/users', function () {
 
 // Get a specific user by ID
 Route::get('/users/{id}', function ($id) {
-    $user = User::with(['car.brand', 'city.country'])->findOrFail($id);
+    $user = User::with(['car.brand', 'location.city.country'])->findOrFail($id);
     return response()->json([
         'user' => $user
     ]);
@@ -36,9 +37,8 @@ Route::post('/users', function (Request $request) {
         'email' => 'required|email|unique:users',
         'password' => 'required',
         'phone' => 'required',
-        'address' => 'required',
+        'location_id' => 'required|exists:locations,id',
         'bio' => 'required',
-        'city_id' => 'required|exists:cities,id',
         'car_id' => 'required|exists:cars,id'
     ]);
 
@@ -48,7 +48,7 @@ Route::post('/users', function (Request $request) {
 
     return response()->json([
         'message' => 'User created successfully',
-        'user' => $user->load(['car.brand', 'city.country'])
+        'user' => $user->load(['car.brand', 'location.city.country'])
     ], 201);
 });
 
@@ -67,9 +67,8 @@ Route::patch('/users/{id}', function (Request $request, $id) {
         ],
         'password' => 'sometimes|string',
         'phone' => 'sometimes|string',
-        'address' => 'sometimes|string',
+        'location_id' => 'sometimes|exists:locations,id',
         'bio' => 'sometimes|string',
-        'city_id' => 'sometimes|exists:cities,id',
         'car_id' => 'sometimes|exists:cars,id'
     ];
     
@@ -84,7 +83,16 @@ Route::patch('/users/{id}', function (Request $request, $id) {
     
     return response()->json([
         'message' => 'User updated successfully',
-        'user' => $user->load(['car.brand', 'city.country'])
+        'user' => $user->load(['car.brand', 'location.city.country'])
+    ]);
+});
+
+// Delete user by id
+Route::delete('/users/{id}', function ($id) {
+    $user = User::findOrFail($id);
+    $user->delete();
+    return response()->json([
+        'message' => 'User deleted successfully'
     ]);
 });
 
@@ -109,6 +117,23 @@ Route::post('/countries', function (Request $request) {
     ], 201);
 });
 
+// Get a specific country by ID
+Route::get('/countries/{id}', function ($id) {
+    $country = Country::findOrFail($id);
+    return response()->json([
+        'country' => $country
+    ]);
+});
+
+// Delete country by id
+Route::delete('/countries/{id}', function ($id) {
+    $country = Country::findOrFail($id);
+    $country->delete();
+    return response()->json([
+        'message' => 'country deleted successfully'
+    ]);
+});
+
 // Get all cities
 Route::get('/cities', function () {
     $cities = City::with('country')->get();
@@ -130,3 +155,193 @@ Route::post('/cities', function (Request $request) {
         'city' => $city->load(['country'])
     ], 201);
 });
+
+// Get a specific city by ID
+Route::get('/cities/{id}', function ($id) {
+    $city = City::with('country')->findOrFail($id);
+    return response()->json([
+        'city' => $city
+    ]);
+});
+
+// Delete city by id
+Route::delete('/cities/{id}', function ($id) {
+    $city = City::findOrFail($id);
+    $city->delete();
+    return response()->json([
+        'message' => 'city deleted successfully'
+    ]);
+});
+
+// get all cars
+Route::get('/cars', function () {
+    $cars = Car::with('brand')->get();
+    return response()->json([
+        'cars' => $cars
+    ]);
+});
+
+// create a new car
+Route::post('/cars', function (Request $request) {
+    $validated = $request->validate([
+        'seats' => 'required|integer',
+        'model' => 'required|string|unique:cars,model',
+        'brand_id' => 'required|exists:brands,id'
+    ]);
+    
+    $car = Car::create($validated);
+    return response()->json([
+        'message' => 'car created successfully',
+        'car' => $car->load(['brand'])
+    ], 201);
+});
+
+// Get a specific car by ID
+Route::get('/cars/{id}', function ($id) {
+    $car = Car::with('brand')->findOrFail($id);
+    return response()->json([
+        'car' => $car
+    ]);
+});
+
+// Delete car by id
+Route::delete('/cars/{id}', function ($id) {
+    $car = Car::findOrFail($id);
+    $car->delete();
+    return response()->json([
+        'message' => 'car deleted successfully'
+    ]);
+});
+
+// Get all brands
+Route::get('/brands', function () {
+    $brands = Brand::with('cars')->get();
+    return response()->json([
+        'brands' => $brands
+    ]);
+});
+
+// create a new brand
+Route::post('/brands', function (Request $request) {
+    $validated = $request->validate([
+        'name' => 'required|string|unique:brands,name',
+    ]);
+    
+    $brand = Brand::create($validated);
+    return response()->json([
+        'message' => 'brand created successfully',
+        'brand' => $brand
+    ], 201);
+});
+
+// Get a specific brand by ID
+Route::get('/brands/{id}', function ($id) {
+    $brand = Brand::with('cars')->findOrFail($id);
+    return response()->json([
+        'brand' => $brand
+    ]);
+});
+
+// Delete brand by id
+Route::delete('/brands/{id}', function ($id) {
+    $brand = Brand::findOrFail($id);
+    $brand->delete();
+    return response()->json([
+        'message' => 'brand deleted successfully'
+    ]);
+});
+
+// Get all locations
+Route::get('/locations', function () {
+    $locations = Location::with('city.country')->get();
+    return response()->json([
+        'locations' => $locations
+    ]);
+});
+
+// create a new location
+Route::post('/locations', function (Request $request) {
+    $validated = $request->validate([
+        'address' => 'required|string|unique:locations,address',
+        'city_id' => 'required|exists:cities,id'
+    ]);
+    
+    $location = Location::create($validated);
+    return response()->json([
+        'message' => 'location created successfully',
+        'location' => $location->load(['city.country'])
+    ], 201);
+});
+
+// Get a specific location by ID
+Route::get('/locations/{id}', function ($id) {
+    $location = Location::with('city.country')->findOrFail($id);
+    return response()->json([
+        'location' => $location
+    ]);
+});
+
+// Delete location by id
+Route::delete('/locations/{id}', function ($id) {
+    $location = Location::findOrFail($id);
+    $location->delete();
+    return response()->json([
+        'message' => 'location deleted successfully'
+    ]);
+});
+
+// Get all future travels
+Route::get('/travels', function () {
+        $travels = DB::select(
+        'SELECT 
+            travels.id AS travel_id,
+            destination.address AS destination_address,
+            startlocation.address AS start_location_address,
+            travels.date AS travel_date,
+            travels.fee AS travel_fee,
+            travels.km AS travel_km,
+            destination.city_id AS destination_city_id,
+            startlocation.city_id AS start_city_id,
+            destination_city.name AS destination_city_name,
+            start_city.name AS start_city_name,
+            destination_city.country_id AS destination_country_id,
+            start_city.country_id AS start_country_id,
+            destination_country.name AS destination_country_name,
+            start_country.name AS start_country_name,
+            users.id AS user_id,
+            users.firstname AS user_firstname,
+            users.lastname AS user_lastname,
+            cars.id AS car_id,
+            cars.model AS car_model,
+            cars.seats AS car_seats,
+            cars.brand_id AS car_brand_id,
+            brands.name AS car_brand_name,
+            brands.id AS car_brand_id
+
+        FROM 
+            travels
+        JOIN 
+            locations AS destination ON destination.id = travels.destination_id
+        JOIN 
+            locations AS startlocation ON startlocation.id = travels.startlocation_id
+        JOIN 
+            cities AS destination_city ON destination_city.id = destination.city_id
+        JOIN 
+            cities AS start_city ON start_city.id = startlocation.city_id
+        JOIN 
+            countries AS destination_country ON destination_country.id = destination_city.country_id
+        JOIN 
+            countries AS start_country ON start_country.id = start_city.country_id
+        JOIN
+            users ON users.id = travels.user_id
+        JOIN
+            cars ON cars.id = travels.car_id
+        JOIN
+            brands ON brands.id = cars.brand_id
+        WHERE 
+            travels.date >= CURDATE();');
+    return response()->json([
+        'travels' => $travels
+    ]);
+});
+
