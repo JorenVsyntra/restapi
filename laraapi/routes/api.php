@@ -36,7 +36,8 @@ Route::post('/users', function (Request $request) {
         'email' => 'required|email|unique:users',
         'password' => 'required',
         'phone' => 'required',
-        'streetnum' => 'required',
+        'address' => 'required',
+        'bio' => 'required',
         'city_id' => 'required|exists:cities,id',
         'car_id' => 'required|exists:cars,id'
     ]);
@@ -66,7 +67,8 @@ Route::patch('/users/{id}', function (Request $request, $id) {
         ],
         'password' => 'sometimes|string',
         'phone' => 'sometimes|string',
-        'streetnum' => 'sometimes|string',
+        'address' => 'sometimes|string',
+        'bio' => 'sometimes|string',
         'city_id' => 'sometimes|exists:cities,id',
         'car_id' => 'sometimes|exists:cars,id'
     ];
