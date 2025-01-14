@@ -39,7 +39,7 @@ Route::post('/users', function (Request $request) {
         'phone' => 'required',
         'location_id' => 'required|exists:locations,id',
         'bio' => 'required',
-        'car_id' => 'required|exists:cars,id'
+        'car_id' => 'sometimes|exists:cars,id'
     ]);
 
     $validated['password'] = Hash::make($validated['password']);
