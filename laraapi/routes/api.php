@@ -38,7 +38,7 @@ Route::post('/users', function (Request $request) {
         'password' => 'required',
         'phone' => 'required',
         'location_id' => 'required|exists:locations,id',
-        'bio' => 'required',
+        'bio' => 'sometimes',
         'car_id' => 'sometimes|exists:cars,id'
     ]);
 
