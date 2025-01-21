@@ -123,6 +123,55 @@ Route::post('/register', function (Request $request) {
 });
 
 // Update a user by ID
+Route::put('/users/{user}', function (Request $request, User $user) {
+    try {
+        $validator = Validator::make($request->all(), [
+            'firstname' => 'required|string',
+            'lastname' => 'required|string',
+            'email' => 'required|string|unique:users,email,' . $user->id,
+            'phone' => 'required|string',
+            'address' => 'required|string',
+            'bio' => 'required|string',
+            // Add other required fields
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        // If address is being updated, update location
+        if (isset($validated['address'])) {
+            $locationData = [
+                'address' => $validated['address'],
+                'city_id' => $user->location->city_id // Keep the same city
+            ];
+
+            $user->location->update($locationData);
+            unset($validated['address']);
+        }
+
+        // Update user with validated data
+        $user->update($validated);
+
+        return response()->json([
+            'message' => 'User updated successfully',
+            'user' => $user->fresh()->load(['car.brand', 'location.city.country'])
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'An error occurred while updating the user',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// Patch a user by ID
 Route::patch('/users/{user}', function (Request $request, User $user) {
     try {
         // Validate only the fields that are present in the request
