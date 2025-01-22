@@ -177,7 +177,7 @@ Route::put('/users/{user}', function (Request $request, User $user) {
 
         return response()->json([
             'message' => 'User updated successfully',
-            'user' => $user->fresh()->load(['car.brand', 'location.city.country'])
+            'user' => $user->fresh()->load(['car', 'location.city.country'])
         ]);
 
     } catch (\Exception $e) {
@@ -482,10 +482,8 @@ Route::get('/travels', function () {
         users.firstname AS driver_firstname,
         users.lastname AS driver_lastname,
         cars.id AS car_id,
-        cars.model AS car_model,
-        cars.seats AS car_seats,
-        cars.brand_id AS car_brand_id,
-        brands.name AS car_brand_name,
+        cars.type AS car_type,
+        cars.carseats AS car_carseats,
         COALESCE(passengers.passengers_count, 0) AS passengers_count
         
 
@@ -515,9 +513,6 @@ Route::get('/travels', function () {
         
     JOIN 
         cars ON cars.id = travels.car_id
-        
-    JOIN 
-        brands ON brands.id = cars.brand_id
         
     LEFT JOIN 
         (SELECT travel_id, COUNT(*) AS passengers_count
@@ -554,9 +549,8 @@ Route::get('/travels/{id}', function ($id) {
             users.firstname AS driver_firstname,
             users.lastname AS driver_lastname,
             cars.id AS car_id,
-            cars.model AS car_model,
-            cars.seats AS car_seats,
-            brands.name AS brand_name,
+            cars.type AS car_type,
+            cars.carseats AS car_carseats,
             COALESCE(passengers.passengers_count, 0) AS passengers_count
 
         FROM 
@@ -585,9 +579,6 @@ Route::get('/travels/{id}', function ($id) {
         
         JOIN 
             cars ON cars.id = travels.car_id
-        
-        JOIN 
-            brands ON brands.id = cars.brand_id
 
         LEFT JOIN 
             (SELECT travel_id, COUNT(*) AS passengers_count
@@ -603,3 +594,4 @@ Route::get('/travels/{id}', function ($id) {
         'travel' => $travel
     ]);
 });
+
