@@ -78,7 +78,8 @@ Route::post('/register', function (Request $request) {
             'address' => 'required|string',
             'city_id' => 'required|exists:cities,id',
             'bio' => 'nullable|string',
-            'car_id' => 'nullable|exists:cars,id'
+            'type' => 'nullable|string',
+            'carseats' => 'nullable|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -89,6 +90,12 @@ Route::post('/register', function (Request $request) {
         }
 
         $validated = $validator->validated();
+
+        // Insert car into cars table and get the ID
+        $car = Car::create([
+            'type' => $validated['type'],
+            'carseats' => $validated['carseats']
+        ]);
 
         // Insert location into locations table and get the ID
         $location = Location::create([ 
@@ -106,7 +113,7 @@ Route::post('/register', function (Request $request) {
             'dob' => $validated['dob'],
             'location_id' => $location->id, 
             'bio' => $validated['bio'] ?? null,
-            'car_id' => $validated['car_id'] ?? null
+            'car_id' => $car->id ?? null
         ]);
 
         return response()->json([
@@ -149,46 +156,26 @@ Route::put('/users/{user}', function (Request $request, User $user) {
 
         $validated = $validator->validated();
 
-        // Update existing car or create new one
-        if (isset($validated['car']) || isset($validated['carseats'])) {
-            $carData = [
-                'type' => $validated['type'] ?? $user->car->type,
-                'carseats' => $validated['carseats'] ?? $user->car->carseats
-            ];
+        $car = Car::firstOrCreate(
+            ['type' => $validated['type'], 'carseats' => $validated['carseats']]
+        );
 
-            // Update existing location or create new one
-            if ($user->location) {
-                $user->location->update($carData);
-            } else {
-                $location = car::create($carData);
-                $validated['car_id'] = $car->id;
-            }
+        // Then, handle the location update/creation
+        $location = Location::firstOrCreate(
+            ['address' => $validated['address'], 'city_id' => $validated['city_id']]
+        );
 
-            // Remove car_id from validated data as it's handled separately
-            unset($validated['type'], $validated['carseats']);
-        }
-
-
-        // If address is being updated, update location
-        if (isset($validated['address']) || isset($validated['city_id'])) {
-            $locationData = [
-                'address' => $validated['address'] ?? $user->location->address,
-                'city_id' => $validated['city_id'] ?? $user->location->city_id
-            ];
-
-            // Update existing location or create new one
-            if ($user->location) {
-                $user->location->update($locationData);
-            } else {
-                $location = Location::create($locationData);
-                $validated['location_id'] = $location->id;
-            }
-            // Remove address and city_id from validated data as they're handled separately
-            unset($validated['address'], $validated['city_id']);
-        }
-
-        // Update user with validated data
-        $user->update($validated);
+        // Update the user with new car_id and location_id
+        $user->update([
+            'firstname' => $validated['firstname'],
+            'lastname' => $validated['lastname'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'bio' => $validated['bio'],
+            'dob' => $validated['dob'],
+            'car_id' => $car->id,
+            'location_id' => $location->id
+        ]);
 
         return response()->json([
             'message' => 'User updated successfully',

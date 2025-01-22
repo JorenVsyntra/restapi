@@ -9,7 +9,7 @@ class Car extends Model
     public $timestamps = false;
     protected $fillable = [
         'carseats',
-        'name',
+        'type',
     ];
 
     public function users()
