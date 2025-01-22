@@ -139,12 +139,10 @@ Route::put('/users/{user}', function (Request $request, User $user) {
             'phone' => 'required|string',
             'address' => 'required|string',
             'city_id' => 'required|exists:cities,id',
-            'bio' => 'required|string',
+            'bio' => 'nullable|string',
             'dob' => 'required|string',
-            'type' => 'required|string',
-            'carseats' => 'required|integer'
-
-            // Add other required fields
+            'type' => 'nullable|string',
+            'carseats' => 'nullable|integer'
         ]);
 
         if ($validator->fails()) {
