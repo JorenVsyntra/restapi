@@ -118,7 +118,7 @@ Route::post('/register', function (Request $request) {
 
         return response()->json([
             'message' => 'User created successfully',
-            'user' => $user->load(['car.brand', 'location.city.country'])
+            'user' => $user->load(['car', 'location.city.country'])
         ], 201);
 
     } catch (\Exception $e) {
@@ -593,5 +593,55 @@ Route::get('/travels/{id}', function ($id) {
     return response()->json([
         'travel' => $travel
     ]);
+});
+
+Route::post('/travels', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'destination_id' => 'required|exists:locations,id',
+        'startlocation_id' => 'required|exists:locations,id',
+        'date' => 'required|date|after_or_equal:today',
+        'fee' => 'required|numeric|min:0',
+        'km' => 'required|numeric|min:0',
+        'user_id' => 'required|exists:users,id',
+        'car_id' => 'required|exists:cars,id',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'message' => 'Validation failed',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    // Maak de reis aan
+    try {
+        DB::beginTransaction();
+
+        $travel = DB::table('travels')->insertGetId([
+            'destination_id' => $request->destination_id,
+            'startlocation_id' => $request->startlocation_id,
+            'date' => $request->date,
+            'fee' => $request->fee,
+            'km' => $request->km,
+            'user_id' => $request->user_id,
+            'car_id' => $request->car_id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Travel created successfully',
+            'travel_id' => $travel
+        ], 201);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'message' => 'An error occurred while creating the travel',
+            'error' => $e->getMessage()
+        ], 500);
+    }
 });
 
