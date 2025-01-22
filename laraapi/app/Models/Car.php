@@ -8,15 +8,9 @@ class Car extends Model
 {
     public $timestamps = false;
     protected $fillable = [
-        'seats',
-        'model',
-        'brand_id'
+        'carseats',
+        'name',
     ];
-
-    public function brand()
-    {
-        return $this->belongsTo(Brand::class);
-    }
 
     public function users()
     {
