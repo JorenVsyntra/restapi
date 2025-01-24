@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\sheareable;
 
 class Travel extends Model
 {
+    use sheareable;
     public $timestamps = false;
     protected $fillable = [
         'startlocation',

@@ -17,9 +17,6 @@ return [
     */
 
     'driver' => env('SCOUT_DRIVER', 'meilisearch'),
-    'meilisearch' => [
-    'host' => env('MEILISEARCH_HOST', 'http://localhost:7700'),
-],
 
     /*
     |--------------------------------------------------------------------------
@@ -135,10 +132,13 @@ return [
 
     'meilisearch' => [
         'host' => env('MEILISEARCH_HOST', 'http://localhost:7700'),
-        'key' => env('MEILISEARCH_KEY'),
+        'key' => env('MEILISEARCH_KEY', null),
         'index-settings' => [
-            // 'users' => [
-            //     'filterableAttributes'=> ['id', 'name', 'email'],
+            // Configure per-index settings
+            // 'posts' => [
+            //     'filterableAttributes' => ['title', 'category'],
+            //     'sortableAttributes' => ['created_at'],
+            //     'searchableAttributes' => ['title', 'content']
             // ],
         ],
     ],
