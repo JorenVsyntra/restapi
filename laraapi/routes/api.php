@@ -595,6 +595,7 @@ Route::get('/travels/{id}', function ($id) {
     ]);
 });
 
+//posttravel
 Route::post('/travels', function (Request $request) {
     $validator = Validator::make($request->all(), [
         'destination_id' => 'required|exists:locations,id',
