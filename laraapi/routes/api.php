@@ -28,7 +28,7 @@ Route::post('/login', function (Request $request) {
         
         return response()->json([
             'message' => 'Login successful',
-            'user' => $user->load(['car.brand', 'location.city.country']),
+            'user' => $user->load(['car', 'location.city.country']),
             'token' => $token
         ]);
     }
