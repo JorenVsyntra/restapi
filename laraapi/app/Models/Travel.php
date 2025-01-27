@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Traits\Searchable;
+use Laravel\Scout\Searchable;
 
 class Travel extends Model
 {
