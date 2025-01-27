@@ -55,6 +55,7 @@ Route::get('/users/{id}', function ($id) {
     ]);
 });
 
+
 //create/register a new user
 Route::post('/register', function (Request $request) {
     try {
@@ -593,6 +594,45 @@ Route::get('/travels/{id}', function ($id) {
     return response()->json([
         'travel' => $travel
     ]);
+});
+
+// post passenger
+Route::post('/passengers', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'user_id' => 'required|exists:users,id',
+        'travel_id' => 'required|exists:travels,id',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'message' => 'Validation failed',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    // Maak de passenger aan
+    try {
+        DB::beginTransaction();
+
+        $passenger = DB::table('user_travel')->insert([
+            'user_id' => $request->user_id,
+            'travel_id' => $request->travel_id,
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Passenger added successfully',
+            'passenger' => $passenger
+        ], 201);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'message' => 'An error occurred while adding the passenger',
+            'error' => $e->getMessage()
+        ], 500);
+    }
 });
 
 //posttravel
