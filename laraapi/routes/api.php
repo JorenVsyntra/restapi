@@ -641,14 +641,26 @@ Route::post('/passengers', function (Request $request) {
 
 //posttravel
 Route::post('/travels', function (Request $request) {
+    $car = DB::table('cars')->where('id', $request->car_id)->first();
+        
+    if (!$car) {
+        return response()->json([
+            'message' => 'Car not found',
+            'errors' => ['car_id' => ['Invalid car specified']]
+        ], 422);
+    }
+
+    $maxSeats = $car->carseats - 1; // Subtract 1 for the driver
     $validator = Validator::make($request->all(), [
         'destination_id' => 'required|exists:locations,id',
         'startlocation_id' => 'required|exists:locations,id',
         'date' => 'required|date|after_or_equal:today',
         'fee' => 'required|numeric|min:0',
         'km' => 'required|numeric|min:0',
+        'price' => 'required|numeric|min:0',
         'user_id' => 'required|exists:users,id',
         'car_id' => 'required|exists:cars,id',
+        'av_seats' => ['required', 'numeric', 'min:1', "max:{$maxSeats}"]
     ]);
 
     if ($validator->fails()) {
@@ -668,8 +680,10 @@ Route::post('/travels', function (Request $request) {
             'date' => $request->date,
             'fee' => $request->fee,
             'km' => $request->km,
+            'price' => $request->price,
             'user_id' => $request->user_id,
             'car_id' => $request->car_id,
+            'av_seats' => $request->av_seats,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
