@@ -608,6 +608,7 @@ Route::post('/passengers', function (Request $request) {
     ]);
 
     if ($validator->fails()) {
+        \Log::error('Validation failed:', $validator->errors()->toArray());
         return response()->json([
             'message' => 'Validation failed',
             'errors' => $validator->errors()
