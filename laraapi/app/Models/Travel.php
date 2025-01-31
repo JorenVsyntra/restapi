@@ -16,7 +16,8 @@ class Travel extends Model
         'user_id',
         'fee',
         'km',
-        'car_id'
+        'car_id',
+        'av_seats'
     ];
 
     public function users()
