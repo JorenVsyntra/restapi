@@ -639,6 +639,24 @@ Route::post('/passengers', function (Request $request) {
     }
 });
 
+// delete passenger
+Route::delete('/passengers/{id}', function ($id) {
+    $passenger = DB::table('user_travel')->where('id', $id)->first();
+
+    if (!$passenger) {
+        return response()->json([
+            'message' => 'Passenger not found',
+            'errors' => ['id' => ['Invalid passenger specified']]
+        ], 422);
+    }
+
+    DB::table('user_travel')->where('id', $id)->delete();
+
+    return response()->json([
+        'message' => 'Passenger deleted successfully'
+    ]);
+});
+
 //posttravel
 Route::post('/travels', function (Request $request) {
     $car = DB::table('cars')->where('id', $request->car_id)->first();
