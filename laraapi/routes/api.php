@@ -487,8 +487,8 @@ Route::get('/travels', function () {
         cars.id AS car_id,
         cars.type AS car_type,
         cars.carseats AS car_carseats,
+        passengers.passenger_ids,
         COALESCE(passengers.passengers_count, 0) AS passengers_count
-        
 
     FROM 
         travels
@@ -518,7 +518,10 @@ Route::get('/travels', function () {
         cars ON cars.id = travels.car_id
         
     LEFT JOIN 
-        (SELECT travel_id, COUNT(*) AS passengers_count
+        (SELECT 
+            travel_id, 
+            COUNT(*) AS passengers_count,
+            GROUP_CONCAT(user_id) AS passenger_ids
          FROM user_travel
          GROUP BY travel_id) AS passengers ON passengers.travel_id = travels.id
         
@@ -556,6 +559,7 @@ Route::get('/travels/{id}', function ($id) {
             cars.id AS car_id,
             cars.type AS car_type,
             cars.carseats AS car_carseats,
+            GROUP_CONCAT(passengers.user_id) AS passenger_ids,
             COALESCE(passengers.passengers_count, 0) AS passengers_count
 
         FROM 
@@ -641,23 +645,17 @@ Route::post('/passengers', function (Request $request) {
 });
 
 // delete passenger
-Route::delete('/passengers/{id}', function ($id) {
-    $passenger = DB::table('user_travel')->where('id', $id)->first();
-
-    if (!$passenger) {
-        return response()->json([
-            'message' => 'Passenger not found',
-            'errors' => ['id' => ['Invalid passenger specified']]
-        ], 422);
-    }
-
-    DB::table('user_travel')->where('id', $id)->delete();
+Route::delete('/passengers/{travel_id}/{user_id}', function ($travel_id, $user_id) {
+    $passenger = DB::table('user_travel')
+        ->where('travel_id', $travel_id)
+        ->where('user_id', $user_id)
+        ->delete();
 
     return response()->json([
-        'message' => 'Passenger deleted successfully'
+        'message' => 'Passenger removed successfully',
+        'passenger' => $passenger
     ]);
 });
-
 //posttravel
 Route::post('/travels', function (Request $request) {
     $car = DB::table('cars')->where('id', $request->car_id)->first();
