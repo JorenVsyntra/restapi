@@ -9,13 +9,15 @@ class Travel extends Model
 {
     use Searchable;
     public $timestamps = false;
+    protected $table = 'travels'; 
     protected $fillable = [
-        'startlocation',
-        'destination',
+        'startlocation_id',
+        'destination_id',
         'date',
         'user_id',
         'fee',
         'km',
+        'price',
         'car_id',
         'av_seats'
     ];
@@ -23,6 +25,16 @@ class Travel extends Model
     public function users()
     {
         return $this->belongsToMany(User::class, 'user_travel');
+    }
+    
+    public function destinationLocation()
+    {
+        return $this->belongsTo(Location::class, 'destination_id');
+    }
+
+    public function startLocation()
+    {
+        return $this->belongsTo(Location::class, 'startlocation_id');
     }
 
     public function driver()

@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Car;
-use App\Models\Brand;
 use App\Models\City;
 use App\Models\Country;
 use App\Models\Location;
@@ -244,7 +243,7 @@ Route::patch('/users/{user}', function (Request $request, User $user) {
 
         return response()->json([
             'message' => 'User updated successfully',
-            'user' => $user->fresh()->load(['car.brand', 'location.city.country'])
+            'user' => $user->fresh()->load(['car', 'location.city.country'])
         ]);
 
     } catch (\Exception $e) {
@@ -343,7 +342,7 @@ Route::delete('/cities/{id}', function ($id) {
 
 // get all cars
 Route::get('/cars', function () {
-    $cars = Car::with('brand')->get();
+    $cars = Car::get();
     return response()->json([
         'cars' => $cars
     ]);
@@ -354,19 +353,18 @@ Route::post('/cars', function (Request $request) {
     $validated = $request->validate([
         'seats' => 'required|integer',
         'model' => 'required|string|unique:cars,model',
-        'brand_id' => 'required|exists:brands,id'
     ]);
     
     $car = Car::create($validated);
     return response()->json([
         'message' => 'car created successfully',
-        'car' => $car->load(['brand'])
+        'car' => $car
     ], 201);
 });
 
 // Get a specific car by ID
 Route::get('/cars/{id}', function ($id) {
-    $car = Car::with('brand')->findOrFail($id);
+    $car = Car::findOrFail($id);
     return response()->json([
         'car' => $car
     ]);
@@ -378,44 +376,6 @@ Route::delete('/cars/{id}', function ($id) {
     $car->delete();
     return response()->json([
         'message' => 'car deleted successfully'
-    ]);
-});
-
-// Get all brands
-Route::get('/brands', function () {
-    $brands = Brand::with('cars')->get();
-    return response()->json([
-        'brands' => $brands
-    ]);
-});
-
-// create a new brand
-Route::post('/brands', function (Request $request) {
-    $validated = $request->validate([
-        'name' => 'required|string|unique:brands,name',
-    ]);
-    
-    $brand = Brand::create($validated);
-    return response()->json([
-        'message' => 'brand created successfully',
-        'brand' => $brand
-    ], 201);
-});
-
-// Get a specific brand by ID
-Route::get('/brands/{id}', function ($id) {
-    $brand = Brand::with('cars')->findOrFail($id);
-    return response()->json([
-        'brand' => $brand
-    ]);
-});
-
-// Delete brand by id
-Route::delete('/brands/{id}', function ($id) {
-    $brand = Brand::findOrFail($id);
-    $brand->delete();
-    return response()->json([
-        'message' => 'brand deleted successfully'
     ]);
 });
 
@@ -458,6 +418,7 @@ Route::delete('/locations/{id}', function ($id) {
     ]);
 });
 
+// Get all travels
 Route::get('/travels', function () {
     // check if there are any future travels
     $basicCheck = DB::select('SELECT COUNT(*) as count FROM travels WHERE date >= CURDATE()');
@@ -588,12 +549,14 @@ Route::get('/travels/{id}', function ($id) {
         
         JOIN 
             cars ON cars.id = travels.car_id
+    LEFT JOIN 
+        (SELECT 
+            travel_id, 
+            COUNT(*) AS passengers_count,
+            GROUP_CONCAT(user_id) AS passenger_ids
+         FROM user_travel
+         GROUP BY travel_id) AS passengers ON passengers.travel_id = travels.id
 
-        LEFT JOIN 
-            (SELECT travel_id, COUNT(*) AS passengers_count
-             FROM user_travel
-             GROUP BY travel_id) AS passengers ON passengers.travel_id = travels.id
-        
         WHERE 
             travels.id = :id',
             ['id' => $id]
@@ -656,9 +619,11 @@ Route::delete('/passengers/{travel_id}/{user_id}', function ($travel_id, $user_i
         'passenger' => $passenger
     ]);
 });
+
 //posttravel
 Route::post('/travels', function (Request $request) {
-    $car = DB::table('cars')->where('id', $request->car_id)->first();
+try {
+    $car = Car::where('id', $request->car_id)->first();
         
     if (!$car) {
         return response()->json([
@@ -667,10 +632,12 @@ Route::post('/travels', function (Request $request) {
         ], 422);
     }
 
-    $maxSeats = $car->carseats - 1; // Subtract 1 for the driver
+    $maxSeats = $car->carseats - 1; 
     $validator = Validator::make($request->all(), [
-        'destination_id' => 'required|exists:locations,id',
-        'startlocation_id' => 'required|exists:locations,id',
+        'destCity_id' => 'required|exists:cities,id',
+        'startCity_id' => 'required|exists:cities,id',
+        'startAddress' => 'required|string',
+        'destAddress' => 'required|string',
         'date' => 'required|date|after_or_equal:today',
         'fee' => 'required|numeric|min:0',
         'km' => 'required|numeric|min:0',
@@ -686,38 +653,40 @@ Route::post('/travels', function (Request $request) {
             'errors' => $validator->errors()
         ], 422);
     }
+    $validated = $validator->validated();
 
-    // Maak de reis aan
-    try {
-        DB::beginTransaction();
+    $destLocation = Location::create([
+        'address' => $validated['destAddress'],
+        'city_id' => $validated['destCity_id']
+    ]);
 
-        $travel = DB::table('travels')->insertGetId([
-            'destination_id' => $request->destination_id,
-            'startlocation_id' => $request->startlocation_id,
-            'date' => $request->date,
-            'fee' => $request->fee,
-            'km' => $request->km,
-            'price' => $request->price,
-            'user_id' => $request->user_id,
-            'car_id' => $request->car_id,
-            'av_seats' => $request->av_seats,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+    $startLocation = Location::create([
+        'address' => $validated['startAddress'],
+        'city_id' => $validated['startCity_id']
+    ]);
 
-        DB::commit();
+    $travel = Travel::create([
+        'destination_id' => $destLocation->id,
+        'startlocation_id' => $startLocation->id,
+        'date' => $validated['date'],
+        'fee' => $validated['fee'],
+        'km' => $validated['km'],
+        'price' => $validated['price'],
+        'user_id' => $validated['user_id'],
+        'car_id' => $validated['car_id'],
+        'av_seats' => $validated['av_seats']
+    ]);
 
-        return response()->json([
-            'message' => 'Travel created successfully',
-            'travel_id' => $travel
-        ], 201);
+    return response()->json([
+        'message' => 'Trip created successfully',
+        'trip' => $travel->load(['destinationLocation.city.country', 'startLocation.city.country'])
+    ], 201);
 
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return response()->json([
-            'message' => 'An error occurred while creating the travel',
-            'error' => $e->getMessage()
-        ], 500);
-    }
+} catch (\Exception $e) {
+    \Log::error('Travel post failed: ' . $e->getMessage());
+    return response()->json([
+        'message' => 'An error occurred while creating the trip',
+        'error' => $e->getMessage()
+    ], 500);
+}
 });
-
